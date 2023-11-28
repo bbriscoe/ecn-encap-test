@@ -1,0 +1,26 @@
+% !TeX root = ecn-encap-test_tr
+% ================================================================
+\section{Introduction}\label{ecn-encap-test_Intr}
+
+This memo defines a brief set of tests to determine the decapsulation behaviour of an unknown remote tunnel endpoint, with respect to the ECN field in the IP header. It provides a table that says whether each possible detected behaviour will propagate ECN correctly.
+
+Test prerequisites are given in \S\,\ref{ecn-encap-test_Prereq}, the main hurdle being the ability to overwrite the ECN field in the outer header at some point along the span of a tunnel. This makes it hard to test `bump in the wire' tunnels. To overcome this hurdle, a convenient arrangement would be to set up the ingress of the tunnel under test on a host under the control of the tester. 
+
+The tests could be automated to be used by a tunnel ingress to determine whether the egress it is paired with will propagate ECN correctly. Without such a test, a tunnel ingress has to zero the outer ECN field if it does not know whether the egress it is paired with will propagate ECN correctly. This could provide the benefit of ECN over the span of every such tunnel. 
+
+In scenarios where there is no control protocol for a tunnel ingress to discover the ECN capability of the egress, such a test could widen ECN coverage to tunnelled paths where it is currently absent.
+
+\subsection{Terminology}\label{ecn-encap-test_Term}
+
+\begin{description}
+	\item[Encap:] the encapsulation function at the ingress tunnel endpoint;
+	\item[Decap:] The decapsulation function at the egress tunnel endpoint;
+\end{description}
+
+The following terms will be used for the IP header at different locations on the path relative to the tunnel, considering only the direction from application client to application server:
+\begin{description}
+	\item[Initial:] the header arriving at the tunnel ingress;
+	\item[Inner:] the header that is encapsulated between the tunnel ingress and egress;
+	\item[Outer:] the header that encapsulates the inner between the tunnel ingress and egress;
+	\item[Onward:] the header leaving the tunnel egress.
+\end{description}
