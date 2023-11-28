@@ -6,7 +6,7 @@ This memo defines a brief set of tests to determine the decapsulation behaviour 
 
 Test prerequisites are given in \S\,\ref{ecn-encap-test_Prereq}, the main hurdle being the ability to overwrite the ECN field in the outer header at some point along the span of a tunnel. This makes it hard to test `bump in the wire' tunnels. To overcome this hurdle, a convenient arrangement would be to set up the ingress of the tunnel under test on a host under the control of the tester. 
 
-The tests could be automated to be used by a tunnel ingress to determine whether the egress it is paired with will propagate ECN correctly. Without such a test, a tunnel ingress has to zero the outer ECN field if it does not know whether the egress it is paired with will propagate ECN correctly. This could provide the benefit of ECN over the span of every such tunnel. 
+The tests could be automated to be used by a tunnel ingress to determine whether the egress it is paired with will propagate ECN correctly. Without such a test, a tunnel ingress is required to zero the outer ECN field if it does not know whether the egress it is paired with will propagate ECN correctly~\cite{Briscoe16b:ecn-tunnel-scope_ID}. 
 
 In scenarios where there is no control protocol for a tunnel ingress to discover the ECN capability of the egress, such a test could widen ECN coverage to tunnelled paths where it is currently absent.
 

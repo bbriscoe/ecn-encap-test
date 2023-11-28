@@ -1,6 +1,6 @@
 % !TeX root = ecn-encap-test_tr
 % ================================================================
-\section{Test}\label{ecn-encap-test_Test}
+\section{The Tests}\label{ecn-encap-test_Test}
 
 % ----------------------------------------------------------------
 \subsection{Test Prerequisites}\label{ecn-encap-test_Prereq}
@@ -8,21 +8,21 @@
 \begin{itemize}[nosep]
 	\item A working tunnel, e.g.\ a VPN;
 	\item Access to one of the devices along the path of the tunnel, where the ECN field of the outer IP header can be altered\footnote{Ideally so it can be altered arbitrarily, but just being able to set congestion experiences (CE, i.e. 0b11) would support all the tests except one, which is a less important one anyway.};
-	\item A remote application server, e.g.\ a web server (preferably more than one) that supports Accurate ECN feedback over either TCP or QUIC.
-	\item A local application client (e.g.\ a web browser) with the ability to configure whether it sends ECN-capable packets (prior to tunnelling), and if so whether it sets ECT(0) or ECT(1). 
+	\item A remote application server, e.g.\ a web server (preferably a variety of different servers) that supports Accurate ECN feedback over either TCP~\cite{Briscoe14d:accecn_ID} or QUIC~\cite{Iyengar21:QUIC}.
+	\item A local application client (e.g.\ a web browser), optionally with the ability to configure whether it sends ECN-capable packets (prior to tunnelling), and if so whether it sets ECT(0) or ECT(1). 
 \end{itemize}
 % ----------------------------------------------------------------
 \subsection{Test Setup}\label{ecn-encap-test_Setup}
 
 Set up the tunnel as normal (procedure will depend on which type of tunnel).
 
-If using TCP, configure the client TCP stack to use Accurate ECN (AccECN) feedback: 
+\paragraph{If using TCP} configure the client TCP stack to use Accurate ECN (AccECN) feedback: 
 \begin{description}[style=nextline, nosep]
 	\item[Linux:] \texttt{\$ sysctl -w net.ipv4.tcp\_ecn=3}
 	\item[MacOS:] \texttt{\$ sysctl -w net.inet.tcp.accurate\_ecn=1}
 \end{description}
 
-If using QUIC, just make sure your QUIC implementation supports accurate ECN feedback (at the time of writing, some still don't comply with the spec~\cite{Iyengar21:QUIC}).
+\paragraph{If using QUIC} make sure your QUIC implementation supports accurate ECN feedback (at the time of writing, some still don't comply with the spec~\cite{Iyengar21:QUIC}).
 
 Make sure your application traffic is being routed via the tunnel.
 
@@ -33,7 +33,7 @@ The aim of this control test is to send packets with each of the four ECN codepo
 
 Also it will be necessary to check that the tunnel ingress is copying each ECN codepoint to the outer. If it's not, in order to test the remote tunnel endpoint, it will be necessary to overwrite the outer with a copy of the Initial ECN codepoint (using a similar approach to that for the main tests in \S\,\ref{ecn-encap-test_Main}). 
 
-\paragraph{Details:} The Initial ECN can either be controlled by configuring the client stack, or by overwriting the field in the packet before it enters the tunnel. Given all codepoints cannot be set by configuration on all packets, only the overwrite approach will be described here. One technique is to use the \texttt{tc} (traffic control) command to add a filter that applies an action to packets matching the filter. The Linux \texttt{tc} command is used for the example here, but  \texttt{tc} is also available for MacOS.
+\paragraph{Details:} The Initial IP-ECN field can either be controlled by configuring the client stack, or by overwriting the field in the packet before it enters the tunnel. Given all codepoints cannot be set by configuration on all packets, only the overwrite approach will be described here. One example technique is to use the \texttt{tc} (traffic control) command to add a filter that applies an action to packets matching the filter. The Linux \texttt{tc} command is used for the example here, but  \texttt{tc} is also available for MacOS.
 
 \begin{verbatim}
 $ tc filter add \
@@ -43,7 +43,7 @@ $ tc filter add \
 \end{verbatim}
 where \texttt{N} would be respectively 0 to 3 to set the ECN field to Not-ECT, ECT(1), ECT(0) or CE. \texttt{DEV} might be \texttt{eth0} for example. And an example of a \texttt{MATCH\_LIST} might be \texttt{ip\_proto tcp dst\_port 80} (see the tc-flower manual page for details).
 
-To check the Outer (outgoing) ECN, and the server's (incoming) feedback of the Onward ECN, Wireshark is recommended (version 4.0 onward supports AccECN in TCP). For this control test, check that the feedback of the Onward ECN is the same as the Initial, and that they are also the same as the Outer and the Inner.
+To check the Outer (outgoing) ECN, and the server's (incoming) feedback of the Onward ECN, Wireshark is recommended (version 4.0 onward supports AccECN in TCP). For this control test, check that the Initial is the same as the feedback of the Onward ECN, and that they are also the same as the Outer and the Inner.
 
 The most specific feedback for testing purposes is given by TCP AccECN feedback in the SYN-ACK from the server in response to the initial TCP SYN packet from the client. The feedback is written with the `handshake encoding` into the three ECN flags (AE, CWR, ECE) in the main TCP header as in the following table (from Table 3 of \cite{Briscoe14d:accecn_ID}, which uses the TCP flags as newly defined in Figure 2 of the same draft):
 
@@ -62,13 +62,11 @@ The most specific feedback for testing purposes is given by TCP AccECN feedback 
 \par}
 %\end{table}
 
-If your client sends data packets to the server once the TCP connection has been established, their feedback can be checked in AccECN TCP options that that server sends to the client. These give a count of how many bytes of each codepoint has been received by the server during the connection (starting from 1, not zero). However, they are not sent in response to every data packet (and they are optional). So further explanation will not be given, but if the reader wants to interpret this feedback, the definition of these fields is in \S\,3.2.3 of \cite{Briscoe14d:accecn_ID}.
+If your client sends data packets to the server once the TCP connection has been established, their feedback can be checked in AccECN TCP options that that server sends to the client. These give a count of how many bytes of each codepoint has been received by the server during the connection (counting from 1, not zero). However, they are not sent in response to every data packet (and they are optional). So further explanation will not be given, but if the reader wants to interpret this feedback, the definition of these TCP Options is in \S\,3.2.3 of \cite{Briscoe14d:accecn_ID}.
 
-QUIC feedback can also be checked, but it has to be decrypted first. Apple gives instructions for how to allow Wireshark to decrypt QUIC for Cloudflare's quiche stack in order to check the ECN  feedback\footnote{\href{https://developer.apple.com/documentation/network/testing_and_debugging_l4s_in_your_app}{Testing and Debugging L4S in Your App}}, so that will not be repeated here. Then, any packet containing an ACK\_ECN frame can be viewed in wireshark to read a count of the number of packets received by the server with each ECN codepoint: ECT(0), ECT(1) and ECN-CE.
+QUIC feedback can also be checked, but it has to be decrypted first. Apple gives instructions for how to allow Wireshark to decrypt QUIC for Cloudflare's quiche stack in order to check the ECN  feedback\footnote{\href{https://developer.apple.com/documentation/network/testing_and_debugging_l4s_in_your_app}{Testing and Debugging L4S in Your App}}, so that will not be repeated here. Then, any packet containing an ACK\_ECN frame can be viewed in Wireshark to read a count of the number of packets received by the server with each ECN codepoint: ECT(0), ECT(1) and ECN-CE.
 
-\paragraph{Test robustness:} It should not be necessary to test IPv4 \& IPv6 (and both combinations of the two), because the definition of ECN is the same in both, so ECN processing code should be common to both. However, a full test could include all four combinations of IPv4 \& IPv6.
-
-The test ought to be repeated a few times, and preferably conducted with a few different application servers (but over the same tunnel). This should help eliminate the possibility that:
+\paragraph{Test robustness:} The test ought to be repeated a few times, and preferably conducted with a few different application servers (but over the same tunnel). This should help eliminate the possibility that:
 \begin{itemize}[nosep]
 	\item Active Queue Management (AQM) within the span of the tunnel is intermittently (and legitimately) setting the congestion experienced (CE) codepoint on the outer of some packets;
 	\item A remote application server might have been chosen that provides incorrect ECN feedback due to an implementation bug.	
@@ -90,6 +88,8 @@ The test ought to be repeated a few times, and preferably conducted with a few d
 	}
 \end{table*}
 
+It should not be necessary to test both IPv4 \& IPv6 (and both combinations of the two), because the definition of ECN is the same in both, so ECN processing code should be common to both. However, a full test could include all four combinations of IPv4 \& IPv6.
+
 % ----------------------------------------------------------------
 \subsection{Main Test}\label{ecn-encap-test_Main}
 
@@ -107,11 +107,11 @@ To test for correct operation of the remote tunnel egress, it is only necessary 
 %	\end{tabular}
 %\par}
 
-For this test, the outer will need to be overwritten with CE, for instance using the \texttt{tc} command as already outlined in \S\,\ref{ecn-encap-test_Control} with \(\mathtt{N}=\mathtt{3}\) (decimal). In this case, the filter will need to be applied after tunnel encapsulation.
+For this test, the filter action will need to be applied after tunnel encapsulation. Then the outer will need to be overwritten with CE, for instance using the \texttt{tc} command as already outlined in \S\,\ref{ecn-encap-test_Control} with \(\mathtt{N}=\mathtt{3}\) (decimal), and in the case of the last row, with \(\mathtt{N}=\mathtt{1}\).
 
 % ----------------------------------------------------------------
 \subsection{Interpretation of Results}\label{ecn-encap-test_Interpretation}
 
 If the results conform with any of the green columns in \autoref{fig:Interpretation}, the tunnel egress correctly propagates ECN-marking, because it either complies with the latest ECN tunnelling spec (RFC~6040~\cite{Briscoe07b:ECN-tunnel}) or with an earlier compatible spec updated by RFC~6040 (IPsec~\cite{IETF_RFC4301:IPSEC_architecture} or the original ECN spec~\cite{rfc3168}).
 
-If, on the other hand, the results conform to one of the red columns, the tunnel egress is non-compliant. For instance, the first red column shows the outcome of a `simple' tunnel, which just strips the outer on decapsulation (as used before ECN tunnelling was first specified in 2001). The final column `mangled' captures all other possible outcomes.
+If, on the other hand, the results conform to one of the red columns, the tunnel egress does not propagate ECN correctly. For instance, the first red column shows the outcome of a `simple' tunnel, which just strips the outer on decapsulation (as used before ECN tunnelling was first specified in 2001). The final column `mangled' captures all other possible outcomes.
